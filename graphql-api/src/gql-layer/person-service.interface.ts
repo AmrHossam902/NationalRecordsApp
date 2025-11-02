@@ -11,7 +11,7 @@ export interface PersonService {
     getPersonById(id: string): Promise<Person>;
     
     getPersonBySSN(ssn: String): Promise<Person>;
-    
+
     getAllPeople(
         after: string, //json
         before: string, //json

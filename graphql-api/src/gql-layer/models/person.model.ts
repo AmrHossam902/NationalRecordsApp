@@ -31,6 +31,9 @@ export class Person {
   @Field(() => [Person], { nullable: true })
   siblings?: Person[];
 
+  mother_id?: string;
+  father_id?: string;
+
   @Field(() => [Person], { nullable: true })
   parents?: Person[];
 

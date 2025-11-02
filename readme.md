@@ -83,3 +83,7 @@ this app is for educational purposes developped in NextJs and GraphQl, it connec
 
 #### creating a new civilian
 ![new person](./images/new-person.png)
+
+
+## Architecture
+![Architecture](./images/architecture.svg)
