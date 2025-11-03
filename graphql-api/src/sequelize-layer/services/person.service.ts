@@ -17,9 +17,7 @@ import { GeneratorService } from "./generator.service";
 @Injectable()
 export class PersonServiceSequelize implements PersonService{
 
-    constructor(public genService: GeneratorService ){
-        
-    }  
+    constructor(public genService: GeneratorService ){}  
     
     async createNewPerson(personData: CreatePersonInput) : Promise<Person>{
 
@@ -67,7 +65,26 @@ export class PersonServiceSequelize implements PersonService{
         });
     }
 
+    async batchGetPersonById(ids: String[]): Promise<(Person|null)[]>{
+        return PersonModel.findAll({
+            where: {
+                id:  { 
+                    [Op.in]: ids 
+                }
+            }
+        })
+        .then( res=> {
+            let result:(Person|null)[] = [];
+            ids.forEach((id)=>{
+                const foundPerson = res.find((p)=> p.id == id);
+                result.push( foundPerson ? this.personModelToPerson(foundPerson) : null );
+            });
+            return result;
+        });
+    }
+
     getPersonBySSN(ssn: String): Promise<Person>{
+        
         return PersonModel.findOne({
             where: {
                 ssn
@@ -75,8 +92,8 @@ export class PersonServiceSequelize implements PersonService{
         }).then((personData: PersonModel)=>{
             return this.personModelToPerson(personData);
         });
-    } 
-
+    }
+    
     getAllPeople(
             after: string, //json
             before: string, //json
@@ -385,7 +402,6 @@ export class PersonServiceSequelize implements PersonService{
         })
     }
 
-
     async getPersonFullSiblings(p: Person): Promise<Person[]> {
         
         let personData: PersonModel | null = await PersonModel.findOne({
@@ -503,6 +519,48 @@ export class PersonServiceSequelize implements PersonService{
         })
     }
 
+    async batchMarriageRecrodsBySpouseId(ids: string[]):Promise<(MarriageRecord[])[]>{
+        
+        return MarriageRecordModel.findAll({
+            where: {
+                rType: 1,
+                [Op.or]: [
+                    {
+                        husbandId: {
+                            [Op.in]: ids
+                        }
+                    },
+                    {
+                        wifeId: {
+                            [Op.in]: ids
+                        }
+                    }
+                ]
+            },
+            include: [
+                {
+                    model: PersonModel, 
+                    as: "husband"
+                },
+                {
+                    model: PersonModel,
+                    as: "wife"
+                }
+            ],
+        })
+        .then((res: MarriageRecordModel[])=> {
+            return ids.map((id)=> {
+                return res.filter( 
+                    (rec: MarriageRecordModel) => 
+                        id == rec.husbandId || id == rec.wifeId 
+                )
+                .map( (rec: MarriageRecordModel) => 
+                    this.marriageRecordModelToMarriageRecord(rec)
+                )
+            });
+        })
+    }
+
     async getChildren(parent1: Person, parent2: Person):Promise<Person[]>{
 
         if(parent1.gender == parent2.gender){
@@ -523,6 +581,57 @@ export class PersonServiceSequelize implements PersonService{
             return children.map((child: PersonModel)=> this.personModelToPerson(child));
         })
         .catch((e)=>{ console.error(e); return []})
+    }
+
+    /**
+     * 
+     * @param parentIds fatherId, then MotherId
+     * @returns 
+     */
+    async batchGetChildren(parentIds: [string, string][]): Promise<(Person[])[]> {
+        
+        // Extract unique parent IDs
+        const uniqueFatherIds = [...new Set(parentIds.map(([fId]) => fId))].filter(fid => Boolean(fid) );
+        const uniqueMotherIds = [...new Set(parentIds.map(([_, mId]) => mId))].filter(mid => Boolean(mid));
+
+        // Single query to get all siblings
+        const allSiblings = await PersonModel.findAll({
+            where: {
+                [Op.and]: [
+                    {
+                        father_id: {
+                            [Op.in]: uniqueFatherIds
+                        }
+                    },
+                    {
+                        mother_id: {
+                            [Op.in]: uniqueMotherIds
+                        }
+                    }
+                ]
+            }
+        });
+
+        // Map results back to original requests
+        return parentIds.map(([fId, mId]) => 
+            allSiblings.filter(p => 
+                p.father_id === fId && 
+                p.mother_id === mId
+            )
+        );
+    }
+
+    async getChildrenNew(father_id: string, mother_id: string){
+        
+        return PersonModel.findAll({
+            where: {
+                father_id: father_id,
+                mother_id: mother_id
+            }
+        })
+        .then((children: PersonModel[])=>{
+            return children.map((child: PersonModel)=> this.personModelToPerson(child));
+        })
     }
     
     async getMarriageRecord(maleNatId: string, femaleNatId: string): Promise<MarriageRecord | null>{
@@ -590,7 +699,9 @@ export class PersonServiceSequelize implements PersonService{
             birthDate: personModel.birthDate,
             deathDate: personModel.deathDate,
             gender: personModel.gender,
-            ssn: personModel.ssn
+            ssn: personModel.ssn,
+            father_id: personModel.father_id,
+            mother_id: personModel.mother_id
         }
     
     }

@@ -2,7 +2,6 @@ import { Resolver, Query, Args, ResolveField, Parent } from '@nestjs/graphql';
 import { PersonService } from '../person-service.interface';
 import { MarriageRecord } from '../models/marriage-record.model';
 import { Inject } from '@nestjs/common';
-import { MarriageReadError, MarriageReadErrorType } from '../exceptions/marriageRead.error';
 
 @Resolver(() => MarriageRecord)
 export class MarriageResolver {

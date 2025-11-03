@@ -22,18 +22,29 @@ import { AuthResolver } from './gql-layer/resolvers/auth.resolver';
 import { JwtAuthGuard } from './gql-layer/auth/auth.guard';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './gql-layer/auth/jwt-strategy';
+import * as DataLoader from 'dataloader';
+import { Person } from './gql-layer/models/person.model';
+import { ModuleRef } from '@nestjs/core';
+import { GQLContext } from './gql-layer/context/gqlContext';
 
 
 @Module({
   imports: [
-    GraphQLModule.forRoot<ApolloDriverConfig>({
+    GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
-      autoSchemaFile: join(process.cwd(), 'dist/schema.gql'),
-      playground: false,
-      plugins: [ApolloServerPluginLandingPageLocalDefault()],
-      resolvers: {
-        Gender: Gender
-      }
+      inject: [ModuleRef],
+      useFactory: async (moduleRef: ModuleRef) => ({
+        autoSchemaFile: join(process.cwd(), 'dist/schema.gql'),
+        playground: false,
+        plugins: [ApolloServerPluginLandingPageLocalDefault()],
+        resolvers: {
+          Gender: Gender
+        },
+        context: ({ req }) => {
+          const personService = moduleRef.get('PersonService', { strict: false });
+          return new GQLContext(personService, req);  
+        }
+      })
     }),
     JwtModule.register({
       secret: process.env.JWT_SECRET,
