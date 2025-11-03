@@ -52,7 +52,7 @@ use docker compose to run the whole app locally:
 
 
 ## Architecture on AWS
-![Architecture](./images/architecture.svg)
+![AWS Diagram](./images/architecture.svg "Open Svg In new Tab to see full Details")
 
 ## problems
 
